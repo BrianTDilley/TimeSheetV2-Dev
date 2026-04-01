@@ -1,0 +1,7 @@
+{
+  "name": "Time Sheet",
+  "description": "A professional time clock and procedure tracking application for medical staff.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
