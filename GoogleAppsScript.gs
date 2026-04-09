@@ -21,12 +21,16 @@ var PROCEDURES = {
   // INJ
   'INJ_Botox': { name: 'Botox', value: 25, category: 'INJ' },
   'INJ_Microneedling': { name: 'Microneedling', value: 50, category: 'INJ' },
+  'INJ_NanoNeedling': { name: 'Nano-needling', value: 25, category: 'INJ' },
+  'INJ_Exesomes': { name: 'Exesomes', value: 15, category: 'INJ' },
   
   // WN
   'WN_IV': { name: 'IV', value: 35, category: 'WN' },
   'WN_Microneedling': { name: 'Microneedling', value: 35, category: 'WN' },
   'WN_Glutathione': { name: 'Glutathione', value: 20, category: 'WN' },
   'WN_PhoneDay': { name: 'Phone Day', value: 50, category: 'WN' },
+  'WN_NanoNeedling': { name: 'Nano-needling', value: 25, category: 'WN' },
+  'WN_Exesomes': { name: 'Exesomes', value: 15, category: 'WN' },
   
   // LS
   'LS_SmallLHR': { name: 'Small LHR', value: 15, category: 'LS' },
@@ -41,7 +45,9 @@ var PROCEDURES = {
   'LS_CP': { name: 'CP', value: 22.5, category: 'LS' },
   'LS_Laundry': { name: 'Laundry', value: 22.5, category: 'LS' },
   'LS_Numbing': { name: 'Numbing', value: 7.5, category: 'LS' },
-  'LS_PhoneDay': { name: 'Phone Day', value: 50, category: 'LS' }
+  'LS_PhoneDay': { name: 'Phone Day', value: 50, category: 'LS' },
+  'LS_NanoNeedling': { name: 'Nano-needling', value: 25, category: 'LS' },
+  'LS_Exesomes': { name: 'Exesomes', value: 15, category: 'LS' }
 };
 
 function doPost(e) {
