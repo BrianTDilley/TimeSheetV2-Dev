@@ -103,6 +103,38 @@ function doPost(e) {
     
     var periodName = month + " " + year + " " + (day <= 15 ? "(1st-15th)" : "(16th-End)");
 
+    // Define procValueMap to lookup procedure values
+    var procValueMap = {};
+    for (var pKey in PROCEDURES) {
+      if (PROCEDURES.hasOwnProperty(pKey)) {
+        var p = PROCEDURES[pKey];
+        var headerName = p.name + " [" + p.category + "]";
+        procValueMap[headerName] = p.value;
+      }
+    }
+
+    // Find the employee's rate
+    var empRate = 0;
+    var emails = Object.keys(EMPLOYEES);
+    for (var i = 0; i < emails.length; i++) {
+      if (EMPLOYEES[emails[i]].name === data.employeeName) {
+        empRate = EMPLOYEES[emails[i]].rate;
+        break;
+      }
+    }
+
+    // Helper to get Excel-style column letters from 0-based index
+    function getColLetter(colIdx) {
+      var temp, letter = '';
+      var col = colIdx + 1;
+      while (col > 0) {
+        temp = (col - 1) % 26;
+        letter = String.fromCharCode(temp + 65) + letter;
+        col = (col - temp - 1) / 26;
+      }
+      return letter;
+    }
+
     // Function to log data to a specific sheet
     function logToSheet(sheetName, isMaster) {
       var sheet = doc.getSheetByName(sheetName);
@@ -116,16 +148,24 @@ function doPost(e) {
       }
 
       var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      
+      var clockInIdx = headers.indexOf('Clock In');
+      var clockOutIdx = headers.indexOf('Clock Out');
+      var totalHoursIdx = headers.indexOf('Total Hours');
+      var hourlyPayIdx = headers.indexOf('Hourly Pay');
+      var bonusPayIdx = headers.indexOf('Bonus Pay');
+      var totalPayIdx = headers.indexOf('Total Pay');
+
       var rowData = {
         'Timestamp': new Date(),
         'Employee Name': data.employeeName,
         'Category': data.category,
         'Clock In': data.clockIn,
         'Clock Out': data.clockOut,
-        'Total Hours': data.totalHours,
-        'Hourly Pay': data.hourlyPay,
-        'Bonus Pay': data.bonusPay,
-        'Total Pay': data.totalPay,
+        'Total Hours': '', // Will be filled with formula
+        'Hourly Pay': '',  // Will be filled with formula
+        'Bonus Pay': '',   // Will be filled with formula
+        'Total Pay': '',   // Will be filled with formula
         'Location In': data.locationIn,
         'Location Out': data.locationOut
       };
@@ -147,6 +187,37 @@ function doPost(e) {
       });
 
       sheet.appendRow(newRow);
+      var r = sheet.getLastRow();
+
+      // Write formulas for calculations
+      if (clockInIdx >= 0 && clockOutIdx >= 0 && totalHoursIdx >= 0) {
+        var cInL = getColLetter(clockInIdx);
+        var cOutL = getColLetter(clockOutIdx);
+        sheet.getRange(r, totalHoursIdx + 1).setFormula('=IF(OR(ISBLANK(' + cInL + r + '), ISBLANK(' + cOutL + r + ')), 0, MOD(' + cOutL + r + '-' + cInL + r + ', 1)*24)');
+      }
+
+      if (totalHoursIdx >= 0 && hourlyPayIdx >= 0) {
+        var tHoursL = getColLetter(totalHoursIdx);
+        sheet.getRange(r, hourlyPayIdx + 1).setFormula('=' + tHoursL + r + ' * ' + empRate);
+      }
+
+      if (bonusPayIdx >= 0) {
+        var bonusTerms = [];
+        for (var i = 0; i < headers.length; i++) {
+          var hName = headers[i];
+          if (procValueMap[hName] !== undefined) {
+            bonusTerms.push('IFERROR(' + getColLetter(i) + r + ' * ' + procValueMap[hName] + ', 0)');
+          }
+        }
+        var bonusFormula = bonusTerms.length > 0 ? '=' + bonusTerms.join(' + ') : '=0';
+        sheet.getRange(r, bonusPayIdx + 1).setFormula(bonusFormula);
+      }
+
+      if (hourlyPayIdx >= 0 && bonusPayIdx >= 0 && totalPayIdx >= 0) {
+        var hPayL = getColLetter(hourlyPayIdx);
+        var bPayL = getColLetter(bonusPayIdx);
+        sheet.getRange(r, totalPayIdx + 1).setFormula('=' + hPayL + r + ' + ' + bPayL + r);
+      }
     }
 
     // Log to Master sheet specific to the Pay Period
@@ -155,6 +226,16 @@ function doPost(e) {
     // Log to Individual sheet specific to the Pay Period
     if (data.employeeName) {
       logToSheet(data.employeeName + ' ' + periodName, false);
+    }
+
+    var monthName = month + " " + year + " (Full Month)";
+
+    // Log to Master sheet for the entire month
+    logToSheet('Master ' + monthName, true);
+
+    // Log to Individual sheet for the entire month
+    if (data.employeeName) {
+      logToSheet(data.employeeName + ' ' + monthName, false);
     }
 
     return ContentService.createTextOutput(JSON.stringify({ 'result': 'success' }))
