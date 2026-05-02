@@ -7,6 +7,7 @@ interface ClockOutModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  onDeleteShift?: () => void;
   procedures: ProcedureCounts;
   allProcedures: Record<string, Procedure>;
   isProcessing: boolean;
@@ -16,6 +17,7 @@ export const ClockOutModal: React.FC<ClockOutModalProps> = ({
   isOpen, 
   onClose, 
   onConfirm, 
+  onDeleteShift,
   procedures,
   allProcedures,
   isProcessing
@@ -73,23 +75,34 @@ export const ClockOutModal: React.FC<ClockOutModalProps> = ({
               </div>
             </div>
           </div>
-          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-2">
-            <Button 
-              onClick={onConfirm} 
-              isLoading={isProcessing}
-              variant="primary"
-              className="w-full sm:w-auto"
-            >
-              Confirm & Clock Out
-            </Button>
-            <Button 
-              onClick={onClose}
-              disabled={isProcessing}
-              variant="ghost"
-              className="w-full sm:w-auto mt-3 sm:mt-0"
-            >
-              Back
-            </Button>
+          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse sm:justify-between items-center gap-2">
+            <div className="flex flex-col sm:flex-row-reverse gap-2 w-full sm:w-auto">
+              <Button 
+                onClick={onConfirm} 
+                isLoading={isProcessing}
+                variant="primary"
+                className="w-full sm:w-auto"
+              >
+                Confirm & Clock Out
+              </Button>
+              <Button 
+                onClick={onClose}
+                disabled={isProcessing}
+                variant="ghost"
+                className="w-full sm:w-auto mt-3 sm:mt-0"
+              >
+                Back
+              </Button>
+            </div>
+            {onDeleteShift && (
+              <button
+                onClick={onDeleteShift}
+                disabled={isProcessing}
+                className="w-full sm:w-auto mt-4 sm:mt-0 text-red-600 text-sm hover:underline flex justify-center items-center font-medium"
+              >
+                Delete Shift (Error)
+              </button>
+            )}
           </div>
         </div>
       </div>

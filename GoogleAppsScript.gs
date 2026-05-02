@@ -89,6 +89,50 @@ function doPost(e) {
       }
     }
 
+    // --- HANDLE DELETE SHIFT ---
+    if (action === 'deleteShift') {
+      var doc = SpreadsheetApp.getActiveSpreadsheet();
+      var sheets = doc.getSheets();
+      
+      for (var s = 0; s < sheets.length; s++) {
+        var sheet = sheets[s];
+        var dataRange = sheet.getDataRange();
+        var sheetValues = dataRange.getValues();
+        
+        if (sheetValues.length > 0) {
+          var headers = sheetValues[0];
+          var empNameIdx = headers.indexOf('Employee Name');
+          var clockInIdx = headers.indexOf('Clock In');
+          var clockOutIdx = headers.indexOf('Clock Out');
+          
+          if (clockInIdx >= 0 && clockOutIdx >= 0) {
+            // Traverse from bottom up to safely delete rows
+            for (var r = sheetValues.length - 1; r > 0; r--) {
+              var rowMatch = true;
+              
+              if (empNameIdx >= 0 && sheetValues[r][empNameIdx] !== data.employeeName) {
+                rowMatch = false;
+              }
+              if (sheetValues[r][clockInIdx] !== data.clockIn) {
+                rowMatch = false;
+              }
+              // Optional: match clockOut to be extra safe
+              if (data.clockOut && sheetValues[r][clockOutIdx] !== data.clockOut) {
+                rowMatch = false;
+              }
+              
+              if (rowMatch) {
+                sheet.deleteRow(r + 1); // +1 because array is 0-indexed and rows are 1-indexed
+              }
+            }
+          }
+        }
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({ 'result': 'success' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // --- HANDLE CLOCK OUT (DEFAULT) ---
     var doc = SpreadsheetApp.getActiveSpreadsheet();
     
@@ -141,8 +185,8 @@ function doPost(e) {
       if (!sheet) {
         sheet = doc.insertSheet(sheetName);
         var baseHeaders = isMaster 
-          ? ['Timestamp', 'Employee Name', 'Category', 'Clock In', 'Clock Out', 'Total Hours', 'Hourly Pay', 'Bonus Pay', 'Total Pay', 'Location In', 'Location Out']
-          : ['Timestamp', 'Category', 'Clock In', 'Clock Out', 'Total Hours', 'Hourly Pay', 'Bonus Pay', 'Total Pay', 'Location In', 'Location Out'];
+          ? ['Timestamp', 'Employee Name', 'Category', 'Clock In', 'Clock Out', 'Total Hours', 'Hourly Pay', 'Bonus Pay', 'Total Pay', 'Location In', 'Location Out', 'Reason']
+          : ['Timestamp', 'Category', 'Clock In', 'Clock Out', 'Total Hours', 'Hourly Pay', 'Bonus Pay', 'Total Pay', 'Location In', 'Location Out', 'Reason'];
         sheet.appendRow(baseHeaders);
         sheet.getRange(1, 1, 1, baseHeaders.length).setFontWeight('bold');
       }
@@ -167,10 +211,11 @@ function doPost(e) {
         'Bonus Pay': '',   // Will be filled with formula
         'Total Pay': '',   // Will be filled with formula
         'Location In': data.locationIn,
-        'Location Out': data.locationOut
+        'Location Out': data.locationOut,
+        'Reason': data.reason || ''
       };
 
-      var standardKeys = ['action', 'employeeName', 'category', 'clockIn', 'clockOut', 'totalHours', 'locationIn', 'locationOut', 'procedures', 'hourlyPay', 'bonusPay', 'totalPay'];
+      var standardKeys = ['action', 'employeeName', 'category', 'clockIn', 'clockOut', 'totalHours', 'locationIn', 'locationOut', 'procedures', 'hourlyPay', 'bonusPay', 'totalPay', 'reason'];
       
       for (var key in data) {
         if (standardKeys.indexOf(key) === -1) {

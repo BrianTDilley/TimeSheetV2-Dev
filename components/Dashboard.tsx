@@ -6,6 +6,9 @@ import { Button } from './ui/Button';
 import { ProcedureTracker } from './ProcedureTracker';
 import { HistoryList } from './HistoryList';
 import { ClockOutModal } from './ClockOutModal';
+import { ManualShiftModal } from './ManualShiftModal';
+import { EditClockInModal } from './EditClockInModal';
+import { EditHistorySessionModal } from './EditHistorySessionModal';
 import { MapPin, LogOut, PlayCircle, StopCircle, Lock, Phone } from 'lucide-react';
 
 interface DashboardProps {
@@ -23,6 +26,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
   
   // Modals
   const [isClockOutModalOpen, setIsClockOutModalOpen] = useState(false);
+  const [isManualShiftModalOpen, setIsManualShiftModalOpen] = useState(false);
+  const [isEditClockInModalOpen, setIsEditClockInModalOpen] = useState(false);
+  const [editingSession, setEditingSession] = useState<Session | null>(null);
 
   // Load data on mount
   useEffect(() => {
@@ -83,7 +89,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
           locationOut: session.locations.clockOut ? `${session.locations.clockOut.lat}, ${session.locations.clockOut.lon}` : 'N/A',
           hourlyPay: session.earnings.hourly.toFixed(2),
           bonusPay: session.earnings.bonus.toFixed(2),
-          totalPay: session.earnings.total.toFixed(2)
+          totalPay: session.earnings.total.toFixed(2),
+          reason: session.reason || ''
       };
 
       // Flatten procedures
@@ -185,6 +192,167 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
     }
   };
 
+  const handleDeleteShift = () => {
+    if (confirm("Are you sure you want to delete this shift? This cannot be undone.")) {
+      setData(prev => ({ ...prev, currentClockIn: null }));
+      setIsClockOutModalOpen(false);
+      setCurrentProcedures({});
+    }
+  };
+
+  const handleDeleteHistorySession = async (session: Session) => {
+    if (!confirm("Are you sure you want to delete this shift from history? This will be removed from your records.")) return;
+
+    // Remove from local history immediately
+    setData(prev => ({
+      ...prev,
+      history: prev.history.filter(s => s.id !== session.id)
+    }));
+
+    try {
+      const payload: GoogleSheetPayload = {
+        action: 'deleteShift',
+        employeeName: employee.name,
+        clockIn: formatTime(session.clockIn),
+        clockOut: formatTime(session.clockOut)
+      };
+
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+      });
+    } catch (err) {
+      console.error("Failed to delete from remote source:", err);
+    }
+  };
+
+  const handleEditClockInSubmit = (newTime: string, reason: string) => {
+    setData(prev => {
+        if (!prev.currentClockIn) return prev;
+        return {
+            ...prev,
+            currentClockIn: {
+                ...prev.currentClockIn,
+                time: new Date(newTime).toISOString(),
+                reason: reason
+            }
+        };
+    });
+    setIsEditClockInModalOpen(false);
+  };
+
+  const handleManualShiftSubmit = async (startTime: string, endTime: string, shiftProcedures: ProcedureCounts, reason: string) => {
+    setIsLoading(true);
+    setLoadingText('Saving Shift...');
+    
+    // Convert to ISO string
+    const clockInIso = new Date(startTime).toISOString();
+    const clockOutIso = new Date(endTime).toISOString();
+
+    const earnings = calculateEarnings(
+        clockInIso, 
+        clockOutIso, 
+        employee.rate, 
+        shiftProcedures, 
+        procedures
+    );
+
+    const newSession: Session = {
+        id: crypto.randomUUID(),
+        clockIn: clockInIso,
+        clockOut: clockOutIso,
+        locations: { clockIn: null, clockOut: null },
+        procedures: shiftProcedures,
+        earnings: {
+            hourly: earnings.hourly,
+            bonus: earnings.bonus,
+            total: earnings.total,
+            hours: earnings.hours
+        },
+        reason: reason,
+        syncStatus: 'pending'
+    };
+
+    setData(prev => ({
+        ...prev,
+        history: [...prev.history, newSession]
+    }));
+    
+    setIsManualShiftModalOpen(false);
+    setIsLoading(false);
+    setLoadingText('');
+
+    await syncSession(newSession);
+  };
+
+  const handleEditHistorySessionSubmit = async (id: string, startTime: string, endTime: string, shiftProcedures: ProcedureCounts, reason: string) => {
+    setIsLoading(true);
+    setLoadingText('Updating Shift...');
+
+    const sessionToEdit = data.history.find(s => s.id === id);
+    if (!sessionToEdit) {
+        setIsLoading(false);
+        return;
+    }
+
+    // First delete it remotely if it exists, since GS does not support ID updates out of the box...
+    try {
+      const payload: GoogleSheetPayload = {
+        action: 'deleteShift',
+        employeeName: employee.name,
+        clockIn: formatTime(sessionToEdit.clockIn),
+        clockOut: formatTime(sessionToEdit.clockOut)
+      };
+
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+      });
+    } catch (err) {
+      console.error("Failed to delete old shift before replacing:", err);
+    }
+
+    // Now insert the updated version
+    const clockInIso = new Date(startTime).toISOString();
+    const clockOutIso = new Date(endTime).toISOString();
+
+    const earnings = calculateEarnings(
+        clockInIso, 
+        clockOutIso, 
+        employee.rate, 
+        shiftProcedures, 
+        procedures
+    );
+
+    const updatedSession: Session = {
+        ...sessionToEdit,
+        clockIn: clockInIso,
+        clockOut: clockOutIso,
+        procedures: shiftProcedures,
+        earnings: {
+            hourly: earnings.hourly,
+            bonus: earnings.bonus,
+            total: earnings.total,
+            hours: earnings.hours
+        },
+        reason: reason || sessionToEdit.reason,
+        syncStatus: 'pending' // Re-sync
+    };
+
+    setData(prev => ({
+        ...prev,
+        history: prev.history.map(s => s.id === id ? updatedSession : s)
+    }));
+
+    setEditingSession(null);
+    setIsLoading(false);
+    setLoadingText('');
+
+    await syncSession(updatedSession);
+  };
+
   const handleRecordPhoneDay = async () => {
     if (!confirm("Are you sure you want to record a Phone Day? This will log a $50 bonus pay entry.")) return;
     
@@ -278,22 +446,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
          </h2>
          
          {!isClockedIn ? (
-             <Button 
-                onClick={handleClockIn} 
-                isLoading={isLoading} 
-                variant="white"
-                className="max-w-xs mx-auto"
-             >
-                {isLoading ? loadingText : 'Start Shift'}
-             </Button>
+             <div className="flex flex-col items-center gap-3">
+                 <Button 
+                    onClick={handleClockIn} 
+                    isLoading={isLoading} 
+                    variant="white"
+                    className="max-w-xs w-full"
+                 >
+                    {isLoading ? loadingText : 'Start Shift'}
+                 </Button>
+                 <button onClick={() => setIsManualShiftModalOpen(true)} className="text-sm opacity-80 hover:opacity-100 underline decoration-white/50 underline-offset-4">
+                     Forgot to Clock In? (Add Past Shift)
+                 </button>
+             </div>
          ) : (
-             <Button 
-                onClick={initiateClockOut} 
-                variant="whiteDanger" 
-                className="max-w-xs mx-auto"
-             >
-                End Shift
-             </Button>
+             <div className="flex flex-col items-center gap-3">
+                 <Button 
+                    onClick={initiateClockOut} 
+                    variant="whiteDanger" 
+                    className="max-w-xs w-full"
+                 >
+                    End Shift
+                 </Button>
+                 <button onClick={() => setIsEditClockInModalOpen(true)} className="text-sm opacity-80 hover:opacity-100 underline decoration-white/50 underline-offset-4">
+                     Edit Clock-In Time
+                 </button>
+             </div>
          )}
       </div>
 
@@ -346,6 +524,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
                     history={data.history} 
                     procedures={procedures}
                     onRetrySync={handleRetrySync} 
+                    onDeleteSession={handleDeleteHistorySession}
+                    onEditSession={(session) => setEditingSession(session)}
                 />
             </div>
         </div>
@@ -355,9 +535,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
         isOpen={isClockOutModalOpen}
         onClose={() => setIsClockOutModalOpen(false)}
         onConfirm={confirmClockOut}
+        onDeleteShift={handleDeleteShift}
         procedures={currentProcedures}
         allProcedures={procedures}
         isProcessing={isLoading}
+      />
+
+      <ManualShiftModal
+        isOpen={isManualShiftModalOpen}
+        onClose={() => setIsManualShiftModalOpen(false)}
+        onSubmit={handleManualShiftSubmit}
+        isProcessing={isLoading}
+        employeeCategory={employee.category}
+        allProcedures={procedures}
+      />
+
+      <EditClockInModal
+        isOpen={isEditClockInModalOpen}
+        onClose={() => setIsEditClockInModalOpen(false)}
+        onSubmit={handleEditClockInSubmit}
+        currentClockInTime={data.currentClockIn?.time || ''}
+        isProcessing={isLoading}
+      />
+
+      <EditHistorySessionModal
+        session={editingSession}
+        isOpen={!!editingSession}
+        onClose={() => setEditingSession(null)}
+        onSubmit={handleEditHistorySessionSubmit}
+        isProcessing={isLoading}
+        employeeCategory={employee.category}
+        allProcedures={procedures}
       />
     </div>
   );

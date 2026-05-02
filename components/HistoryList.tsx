@@ -1,15 +1,17 @@
 import React from 'react';
 import { Session, Procedure } from '../types';
 import { formatDate, formatTime, formatDuration, formatCurrency } from '../utils';
-import { Clock, DollarSign, Calendar, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { Clock, DollarSign, Calendar, CheckCircle, AlertCircle, RefreshCw, Trash2, Edit } from 'lucide-react';
 
 interface HistoryListProps {
   history: Session[];
   procedures: Record<string, Procedure>;
   onRetrySync: (session: Session) => void;
+  onDeleteSession: (session: Session) => void;
+  onEditSession: (session: Session) => void;
 }
 
-export const HistoryList: React.FC<HistoryListProps> = ({ history, procedures, onRetrySync }) => {
+export const HistoryList: React.FC<HistoryListProps> = ({ history, procedures, onRetrySync, onDeleteSession, onEditSession }) => {
   if (history.length === 0) {
     return (
       <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-300">
@@ -55,6 +57,22 @@ export const HistoryList: React.FC<HistoryListProps> = ({ history, procedures, o
                         <RefreshCw size={18} />
                     </button>
                 )}
+                {/* Edit Shift Button */}
+                <button
+                    onClick={() => onEditSession(session)}
+                    className="text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 p-1 rounded-full transition-colors ml-1"
+                    title="Edit Shift (Fix errors, set new time or procedures)"
+                >
+                    <Edit size={18} />
+                </button>
+                {/* Delete Shift Button */}
+                <button
+                    onClick={() => onDeleteSession(session)}
+                    className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded-full transition-colors ml-1"
+                    title="Delete Shift"
+                >
+                    <Trash2 size={18} />
+                </button>
               </div>
             </div>
 

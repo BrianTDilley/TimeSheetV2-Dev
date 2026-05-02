@@ -35,6 +35,7 @@ export interface Session {
     total: number;
     hours: number;
   };
+  reason?: string;
   syncStatus?: 'synced' | 'pending' | 'failed';
 }
 
@@ -42,6 +43,7 @@ export interface EmployeeData {
   currentClockIn: {
     time: string;
     location: GeoLocation | null;
+    reason?: string;
   } | null;
   history: Session[];
 }
@@ -58,7 +60,7 @@ export interface LoginResponse {
 }
 
 export interface GoogleSheetPayload {
-  action?: 'login' | 'clockOut' | 'phoneDay';
+  action?: 'login' | 'clockOut' | 'phoneDay' | 'deleteShift';
   email?: string;
   pin?: string;
   employeeName?: string;
@@ -71,5 +73,6 @@ export interface GoogleSheetPayload {
   hourlyPay?: string;
   bonusPay?: string;
   totalPay?: string;
+  reason?: string;
   [key: string]: string | number | ProcedureCounts | undefined; 
 }
