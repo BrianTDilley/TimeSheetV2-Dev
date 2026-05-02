@@ -504,7 +504,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
         
         {/* Left Col: Procedures (Only visible when clocked in) */}
         {isClockedIn && (
-            <div className="md:col-span-1">
+            <div className="md:col-span-3 max-w-2xl mx-auto w-full">
                  <ProcedureTracker 
                     counts={currentProcedures} 
                     onChange={setCurrentProcedures} 
@@ -515,20 +515,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
         )}
 
         {/* Right Col: History */}
-        <div className={`${isClockedIn ? 'md:col-span-2' : 'md:col-span-3'} space-y-4`}>
-            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                Work History
-            </h2>
-            <div className="max-h-[600px] overflow-y-auto pr-2">
-                <HistoryList 
-                    history={data.history} 
-                    procedures={procedures}
-                    onRetrySync={handleRetrySync} 
-                    onDeleteSession={handleDeleteHistorySession}
-                    onEditSession={(session) => setEditingSession(session)}
-                />
+        {!isClockedIn && (
+            <div className="md:col-span-3 space-y-4">
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    Work History
+                </h2>
+                <div className="max-h-[600px] overflow-y-auto pr-2">
+                    <HistoryList 
+                        history={data.history} 
+                        procedures={procedures}
+                        onRetrySync={handleRetrySync} 
+                        onDeleteSession={handleDeleteHistorySession}
+                        onEditSession={(session) => setEditingSession(session)}
+                    />
+                </div>
             </div>
-        </div>
+        )}
       </div>
 
       <ClockOutModal 

@@ -91,7 +91,27 @@ function doPost(e) {
 
     // --- HANDLE DELETE SHIFT ---
     if (action === 'deleteShift') {
-      var doc = SpreadsheetApp.getActiveSpreadsheet();
+      var dateForDelete = new Date(data.clockIn || data.clockOut || new Date());
+      if (isNaN(dateForDelete.getTime())) dateForDelete = new Date();
+      var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      var monthStr = monthNames[dateForDelete.getMonth()];
+      var yearStr = dateForDelete.getFullYear();
+      var fileName = monthStr + ", " + yearStr + " Payroll";
+
+      var doc = null;
+      try {
+        var iterator = DriveApp.getFilesByName(fileName);
+        if (iterator.hasNext()) {
+          doc = SpreadsheetApp.open(iterator.next());
+        }
+      } catch (e) {
+        // Ignore, fallback to active below
+      }
+
+      if (!doc) {
+        doc = SpreadsheetApp.getActiveSpreadsheet();
+      }
+
       var sheets = doc.getSheets();
       
       for (var s = 0; s < sheets.length; s++) {
@@ -134,10 +154,7 @@ function doPost(e) {
     }
 
     // --- HANDLE CLOCK OUT (DEFAULT) ---
-    var doc = SpreadsheetApp.getActiveSpreadsheet();
-    
-    // Determine the Pay Period for this entry
-    var date = new Date(data.clockOut);
+    var date = new Date(data.clockOut || data.clockIn);
     if (isNaN(date.getTime())) date = new Date(); // fallback
     
     var year = date.getFullYear();
@@ -146,6 +163,31 @@ function doPost(e) {
     var day = date.getDate();
     
     var periodName = month + " " + year + " " + (day <= 15 ? "(1st-15th)" : "(16th-End)");
+    var fileName = month + ", " + year + " Payroll";
+
+    var doc = null;
+    try {
+      var iterator = DriveApp.getFilesByName(fileName);
+      if (iterator.hasNext()) {
+        doc = SpreadsheetApp.open(iterator.next());
+      } else {
+        doc = SpreadsheetApp.create(fileName);
+        try {
+          var activeFile = DriveApp.getFileById(SpreadsheetApp.getActiveSpreadsheet().getId());
+          var parents = activeFile.getParents();
+          if (parents.hasNext()) {
+            var folder = parents.next();
+            DriveApp.getFileById(doc.getId()).moveTo(folder);
+          }
+        } catch (e) {
+          // Ignore
+        }
+        
+        // Remove default 'Sheet1' later if we inserted new ones
+      }
+    } catch(e) {
+      doc = SpreadsheetApp.getActiveSpreadsheet(); // Fallback if DriveApp is unauthorized
+    }
 
     // Define procValueMap to lookup procedure values
     var procValueMap = {};
@@ -282,6 +324,14 @@ function doPost(e) {
     if (data.employeeName) {
       logToSheet(data.employeeName + ' ' + monthName, false);
     }
+
+    // Remove default "Sheet1" if it was created by SpreadsheetApp.create()
+    try {
+      var sheet1 = doc.getSheetByName('Sheet1');
+      if (sheet1 && doc.getSheets().length > 1) {
+        doc.deleteSheet(sheet1);
+      }
+    } catch(e) {}
 
     return ContentService.createTextOutput(JSON.stringify({ 'result': 'success' }))
       .setMimeType(ContentService.MimeType.JSON);
