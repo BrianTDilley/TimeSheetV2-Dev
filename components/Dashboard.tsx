@@ -9,7 +9,7 @@ import { ClockOutModal } from './ClockOutModal';
 import { ManualShiftModal } from './ManualShiftModal';
 import { EditClockInModal } from './EditClockInModal';
 import { EditHistorySessionModal } from './EditHistorySessionModal';
-import { MapPin, LogOut, PlayCircle, StopCircle, Lock, Phone } from 'lucide-react';
+import { MapPin, LogOut, PlayCircle, StopCircle, Lock, Phone, AlertCircle } from 'lucide-react';
 
 interface DashboardProps {
   email: string;
@@ -23,6 +23,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
   const [currentProcedures, setCurrentProcedures] = useState<ProcedureCounts>({});
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('');
+  
+  const isClockedIn = !!data.currentClockIn;
+
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isClockedIn) {
+      interval = setInterval(() => setNow(Date.now()), 60000);
+    }
+    return () => clearInterval(interval);
+  }, [isClockedIn]);
+
+  const hoursClockedIn = isClockedIn && data.currentClockIn
+    ? (now - new Date(data.currentClockIn.time).getTime()) / (1000 * 60 * 60)
+    : 0;
   
   // Modals
   const [isClockOutModalOpen, setIsClockOutModalOpen] = useState(false);
@@ -40,6 +55,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
       }
     }
   }, [email]);
+
+  // Request Notification Permission
+  useEffect(() => {
+    if (isClockedIn && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, [isClockedIn]);
+
+  // Check for long shifts (forgot to clock out)
+  useEffect(() => {
+    if (!isClockedIn || !data.currentClockIn) return;
+
+    // Check every 15 minutes
+    const interval = setInterval(() => {
+      const clockInTime = new Date(data.currentClockIn!.time).getTime();
+      const now = Date.now();
+      const hoursClockedIn = (now - clockInTime) / (1000 * 60 * 60);
+
+      // check if it crossed a 10 hour threshold
+      if (hoursClockedIn > 10) {
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Time Clock Reminder', {
+              body: `You have been clocked in for over ${Math.floor(hoursClockedIn)} hours. Did you forget to clock out?`,
+              icon: '/favicon.ico'
+            });
+          }
+      }
+    }, 15 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [isClockedIn, data.currentClockIn]);
 
   // Persist data whenever it changes
   useEffect(() => {
@@ -133,7 +179,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
       }
   };
 
-  const confirmClockOut = async () => {
+  const confirmClockOut = async (customClockOutTime?: string) => {
     if (!data.currentClockIn) return;
     setIsLoading(true);
     setLoadingText('Processing...');
@@ -142,7 +188,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
         setLoadingText('Verifying Location...');
         const location = await getGeoLocation();
         
-        const clockOutTime = new Date().toISOString();
+        const clockOutTime = customClockOutTime ? new Date(customClockOutTime).toISOString() : new Date().toISOString();
         const earnings = calculateEarnings(
             data.currentClockIn.time, 
             clockOutTime, 
@@ -404,8 +450,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
       await syncSession(session);
   };
 
-  const isClockedIn = !!data.currentClockIn;
-
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-6 space-y-6">
       
@@ -429,6 +473,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
             <LogOut size={14} /> Sign Out
         </button>
       </div>
+
+      {isClockedIn && hoursClockedIn >= 10 && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md shadow-sm">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700 font-medium">
+                You have been clocked in for over {Math.floor(hoursClockedIn)} hours. Did you forget to clock out?
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Status Card */}
       <div className={`rounded-xl p-6 text-white text-center shadow-lg transition-colors duration-500 ${isClockedIn ? 'bg-gradient-to-r from-indigo-500 to-purple-600' : 'bg-gray-700'}`}>

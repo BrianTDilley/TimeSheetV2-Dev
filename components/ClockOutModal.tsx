@@ -6,7 +6,7 @@ import { AlertTriangle, CheckCircle } from 'lucide-react';
 interface ClockOutModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (clockOutTime: string) => void;
   onDeleteShift?: () => void;
   procedures: ProcedureCounts;
   allProcedures: Record<string, Procedure>;
@@ -22,6 +22,16 @@ export const ClockOutModal: React.FC<ClockOutModalProps> = ({
   allProcedures,
   isProcessing
 }) => {
+  const [clockOutTime, setClockOutTime] = React.useState('');
+
+  React.useEffect(() => {
+    if (isOpen) {
+      const now = new Date();
+      const formatted = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0') + 'T' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      setClockOutTime(formatted);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const hasProcedures = Object.keys(procedures).some(key => procedures[key] > 0);
@@ -45,7 +55,20 @@ export const ClockOutModal: React.FC<ClockOutModalProps> = ({
                 <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
                   Confirm Shift End
                 </h3>
-                <div className="mt-2 space-y-4">
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Clock-Out Time</label>
+                    <input 
+                      type="datetime-local" 
+                      value={clockOutTime} 
+                      onChange={(e) => setClockOutTime(e.target.value)} 
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Adjust this if you forgot to clock out earlier.
+                    </p>
+                  </div>
+                  
                   <p className="text-sm text-gray-500">
                     Please verify your procedures for this session.
                   </p>
@@ -78,10 +101,11 @@ export const ClockOutModal: React.FC<ClockOutModalProps> = ({
           <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse sm:justify-between items-center gap-2">
             <div className="flex flex-col sm:flex-row-reverse gap-2 w-full sm:w-auto">
               <Button 
-                onClick={onConfirm} 
+                onClick={() => onConfirm(clockOutTime)} 
                 isLoading={isProcessing}
                 variant="primary"
                 className="w-full sm:w-auto"
+                disabled={!clockOutTime}
               >
                 Confirm & Clock Out
               </Button>
