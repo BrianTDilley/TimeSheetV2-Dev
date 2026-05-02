@@ -249,7 +249,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
                 <h1 className="text-2xl font-bold text-gray-800">Welcome, {employee.name.split(' ')[0]}</h1>
                 <div className="flex flex-col gap-1">
                     <p className="text-xs text-gray-500 flex items-center gap-1">
-                        <MapPin size={12} /> Geolocating on clock actions
+                        <MapPin size={12} /> Geolocating when Starting and Ending Shift
                     </p>
                     <p className="text-xs text-gray-500 flex items-center gap-1">
                         <Lock size={12} /> Secure Session Active

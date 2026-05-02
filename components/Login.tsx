@@ -8,7 +8,7 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('savedEmail') || '');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -46,6 +46,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         const data: LoginResponse = await response.json();
 
         if (data.result === 'success' && data.employee && data.procedures) {
+            localStorage.setItem('savedEmail', cleanEmail);
             onLogin(cleanEmail, data.employee, data.procedures);
         } else {
             setError(data.error || 'Login failed. Please check credentials.');

@@ -92,6 +92,17 @@ function doPost(e) {
     // --- HANDLE CLOCK OUT (DEFAULT) ---
     var doc = SpreadsheetApp.getActiveSpreadsheet();
     
+    // Determine the Pay Period for this entry
+    var date = new Date(data.clockOut);
+    if (isNaN(date.getTime())) date = new Date(); // fallback
+    
+    var year = date.getFullYear();
+    var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    var month = monthNames[date.getMonth()];
+    var day = date.getDate();
+    
+    var periodName = month + " " + year + " " + (day <= 15 ? "(1st-15th)" : "(16th-End)");
+
     // Function to log data to a specific sheet
     function logToSheet(sheetName, isMaster) {
       var sheet = doc.getSheetByName(sheetName);
@@ -138,12 +149,12 @@ function doPost(e) {
       sheet.appendRow(newRow);
     }
 
-    // Log to Master sheet
-    logToSheet('TimeLog', true);
+    // Log to Master sheet specific to the Pay Period
+    logToSheet('Master ' + periodName, true);
     
-    // Log to Individual sheet
+    // Log to Individual sheet specific to the Pay Period
     if (data.employeeName) {
-      logToSheet(data.employeeName, false);
+      logToSheet(data.employeeName + ' ' + periodName, false);
     }
 
     return ContentService.createTextOutput(JSON.stringify({ 'result': 'success' }))
@@ -157,86 +168,4 @@ function doPost(e) {
   }
 }
 
-/**
- * Creates a menu in the spreadsheet to manage the summary sheet.
- */
-function onOpen() {
-  var ui = SpreadsheetApp.getUi();
-  ui.createMenu('Time Sheet Admin')
-      .addItem('Setup/Update Summary Sheet', 'setupSummarySheet')
-      .addToUi();
-}
 
-/**
- * Sets up or updates the Summary sheet with formulas linking to individual employee sheets.
- */
-function setupSummarySheet() {
-  var doc = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = doc.getSheetByName('Summary');
-  if (!sheet) {
-    sheet = doc.insertSheet('Summary', 0);
-  }
-  
-  sheet.clear();
-  
-  // Setup Month/Year selector
-  var now = new Date();
-  sheet.getRange('A1').setValue('Year:').setFontWeight('bold');
-  sheet.getRange('B1').setValue(now.getFullYear());
-  sheet.getRange('C1').setValue('Month:').setFontWeight('bold');
-  sheet.getRange('D1').setValue(now.getMonth() + 1);
-  
-  var headers = ['Employee', '1st - 15th Pay', '16th - End Pay', 'Total Monthly Pay'];
-  sheet.getRange(3, 1, 1, headers.length).setValues([headers]).setFontWeight('bold').setBackground('#f3f4f6');
-  
-  var emails = Object.keys(EMPLOYEES);
-  var row = 4;
-  
-  for (var i = 0; i < emails.length; i++) {
-    var emp = EMPLOYEES[emails[i]];
-    var name = emp.name;
-    
-    // Ensure individual sheet exists for formulas to work
-    var empSheet = doc.getSheetByName(name);
-    if (!empSheet) {
-      empSheet = doc.insertSheet(name);
-      empSheet.appendRow(['Timestamp', 'Category', 'Clock In', 'Clock Out', 'Total Hours', 'Hourly Pay', 'Bonus Pay', 'Total Pay', 'Location In', 'Location Out']);
-      empSheet.getRange(1, 1, 1, 10).setFontWeight('bold');
-    }
-    
-    sheet.getRange(row, 1).setValue(name);
-    
-    var yearRef = '$B$1';
-    var monthRef = '$D$1';
-    
-    // 1st-15th (Col H is Total Pay in individual sheets)
-    var formula1 = '=SUMIFS(\'' + name + '\'!H:H, \'' + name + '\'!A:A, ">="&DATE(' + yearRef + ', ' + monthRef + ', 1), \'' + name + '\'!A:A, "<="&DATE(' + yearRef + ', ' + monthRef + ', 15))';
-    sheet.getRange(row, 2).setFormula(formula1);
-    
-    // 16th-End
-    var formula2 = '=SUMIFS(\'' + name + '\'!H:H, \'' + name + '\'!A:A, ">="&DATE(' + yearRef + ', ' + monthRef + ', 16), \'' + name + '\'!A:A, "<="&EOMONTH(DATE(' + yearRef + ', ' + monthRef + ', 1), 0))';
-    sheet.getRange(row, 3).setFormula(formula2);
-    
-    // Total
-    var formula3 = '=B' + row + ' + C' + row;
-    sheet.getRange(row, 4).setFormula(formula3);
-    
-    row++;
-  }
-  
-  // Add Grand Total row
-  sheet.getRange(row, 1).setValue('GRAND TOTAL').setFontWeight('bold');
-  sheet.getRange(row, 2).setFormula('=SUM(B4:B' + (row-1) + ')').setFontWeight('bold');
-  sheet.getRange(row, 3).setFormula('=SUM(C4:C' + (row-1) + ')').setFontWeight('bold');
-  sheet.getRange(row, 4).setFormula('=SUM(D4:D' + (row-1) + ')').setFontWeight('bold');
-  
-  // Formatting
-  sheet.getRange(4, 2, row - 3, 3).setNumberFormat('$#,##0.00');
-  sheet.setColumnWidth(1, 200);
-  sheet.setColumnWidth(2, 120);
-  sheet.setColumnWidth(3, 120);
-  sheet.setColumnWidth(4, 150);
-  
-  // Add some borders
-  sheet.getRange(3, 1, row - 2, 4).setBorder(true, true, true, true, true, true);
-}
