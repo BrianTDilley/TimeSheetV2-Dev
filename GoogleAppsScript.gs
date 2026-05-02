@@ -280,12 +280,16 @@ function doPost(e) {
       if (clockInIdx >= 0 && clockOutIdx >= 0 && totalHoursIdx >= 0) {
         var cInL = getColLetter(clockInIdx);
         var cOutL = getColLetter(clockOutIdx);
-        sheet.getRange(r, totalHoursIdx + 1).setFormula('=IF(OR(ISBLANK(' + cInL + r + '), ISBLANK(' + cOutL + r + ')), 0, MOD(' + cOutL + r + '-' + cInL + r + ', 1)*24)');
+        var tHoursRange = sheet.getRange(r, totalHoursIdx + 1);
+        tHoursRange.setFormula('=IF(OR(ISBLANK(' + cInL + r + '), ISBLANK(' + cOutL + r + ')), 0, MOD(' + cOutL + r + '-' + cInL + r + ', 1)*24)');
+        tHoursRange.setNumberFormat('0.00');
       }
 
       if (totalHoursIdx >= 0 && hourlyPayIdx >= 0) {
         var tHoursL = getColLetter(totalHoursIdx);
-        sheet.getRange(r, hourlyPayIdx + 1).setFormula('=' + tHoursL + r + ' * ' + empRate);
+        var hPayRange = sheet.getRange(r, hourlyPayIdx + 1);
+        hPayRange.setFormula('=' + tHoursL + r + ' * ' + empRate);
+        hPayRange.setNumberFormat('"$"#,##0.00');
       }
 
       if (bonusPayIdx >= 0) {
@@ -297,13 +301,17 @@ function doPost(e) {
           }
         }
         var bonusFormula = bonusTerms.length > 0 ? '=' + bonusTerms.join(' + ') : '=0';
-        sheet.getRange(r, bonusPayIdx + 1).setFormula(bonusFormula);
+        var bPayRange = sheet.getRange(r, bonusPayIdx + 1);
+        bPayRange.setFormula(bonusFormula);
+        bPayRange.setNumberFormat('"$"#,##0.00');
       }
 
       if (hourlyPayIdx >= 0 && bonusPayIdx >= 0 && totalPayIdx >= 0) {
         var hPayL = getColLetter(hourlyPayIdx);
         var bPayL = getColLetter(bonusPayIdx);
-        sheet.getRange(r, totalPayIdx + 1).setFormula('=' + hPayL + r + ' + ' + bPayL + r);
+        var tPayRange = sheet.getRange(r, totalPayIdx + 1);
+        tPayRange.setFormula('=' + hPayL + r + ' + ' + bPayL + r);
+        tPayRange.setNumberFormat('"$"#,##0.00');
       }
     }
 
