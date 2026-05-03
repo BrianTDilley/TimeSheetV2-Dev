@@ -11,6 +11,7 @@ interface ClockOutModalProps {
   procedures: ProcedureCounts;
   allProcedures: Record<string, Procedure>;
   isProcessing: boolean;
+  clockInTime?: string | null;
 }
 
 export const ClockOutModal: React.FC<ClockOutModalProps> = ({ 
@@ -20,7 +21,8 @@ export const ClockOutModal: React.FC<ClockOutModalProps> = ({
   onDeleteShift,
   procedures,
   allProcedures,
-  isProcessing
+  isProcessing,
+  clockInTime
 }) => {
   const [clockOutTime, setClockOutTime] = React.useState('');
 
@@ -35,6 +37,22 @@ export const ClockOutModal: React.FC<ClockOutModalProps> = ({
   if (!isOpen) return null;
 
   const hasProcedures = Object.keys(procedures).some(key => procedures[key] > 0);
+  
+  // Format the clock in time strictly 
+  let formattedClockIn = 'Unknown';
+  if (clockInTime) {
+      try {
+          const d = new Date(clockInTime);
+          formattedClockIn = d.toLocaleString(undefined, { 
+              month: 'short', 
+              day: 'numeric', 
+              hour: 'numeric', 
+              minute: '2-digit' 
+          });
+      } catch (e) {
+          // fallback
+      }
+  }
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -56,6 +74,13 @@ export const ClockOutModal: React.FC<ClockOutModalProps> = ({
                   Confirm Shift End
                 </h3>
                 <div className="mt-4 space-y-4">
+                  {clockInTime && (
+                    <div className="bg-indigo-50 px-3 py-2 rounded-md border border-indigo-100">
+                      <p className="text-xs text-indigo-800 uppercase tracking-wider font-semibold mb-1">Clocked In At</p>
+                      <p className="text-sm font-medium text-indigo-900">{formattedClockIn}</p>
+                    </div>
+                  )}
+                  
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Clock-Out Time</label>
                     <input 

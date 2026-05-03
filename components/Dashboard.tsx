@@ -9,7 +9,7 @@ import { ClockOutModal } from './ClockOutModal';
 import { ManualShiftModal } from './ManualShiftModal';
 import { EditClockInModal } from './EditClockInModal';
 import { EditHistorySessionModal } from './EditHistorySessionModal';
-import { MapPin, LogOut, PlayCircle, StopCircle, Lock, Phone, AlertCircle } from 'lucide-react';
+import { MapPin, LogOut, PlayCircle, StopCircle, Lock, Phone, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface DashboardProps {
   email: string;
@@ -476,9 +476,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
                 </div>
             </div>
         </div>
-        <button onClick={onLogout} className="text-sm text-gray-600 hover:text-red-600 flex items-center gap-1 transition-colors">
-            <LogOut size={14} /> Sign Out
-        </button>
+        <div className="flex items-center gap-4">
+            <button onClick={() => window.location.reload()} className="text-sm text-gray-600 hover:text-indigo-600 flex items-center gap-1 transition-colors">
+                <RefreshCw size={14} /> Refresh
+            </button>
+            <button onClick={onLogout} className="text-sm text-gray-600 hover:text-red-600 flex items-center gap-1 transition-colors">
+                <LogOut size={14} /> Sign Out
+            </button>
+        </div>
       </div>
 
       {isClockedIn && hoursClockedIn >= 10 && (
@@ -607,6 +612,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
         procedures={currentProcedures}
         allProcedures={procedures}
         isProcessing={isLoading}
+        clockInTime={data.currentClockIn?.time}
       />
 
       <ManualShiftModal
