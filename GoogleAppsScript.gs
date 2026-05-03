@@ -94,7 +94,7 @@ function doPost(e) {
 
     // --- HANDLE DELETE SHIFT ---
     if (action === 'deleteShift') {
-      var dateForDelete = new Date(data.clockIn || data.clockOut || new Date());
+      var dateForDelete = new Date(data.deleteDate || data.clockIn || data.clockOut || new Date());
       if (isNaN(dateForDelete.getTime())) dateForDelete = new Date();
       var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       var monthStr = monthNames[dateForDelete.getMonth()];
@@ -138,9 +138,13 @@ function doPost(e) {
                 rowMatch = false;
               }
               
-              // Helper to normalize time strings (e.g. "03:15:00 PM" vs "3:15:00 PM")
+              // Helper to normalize time strings (e.g. "03:15:00 PM" vs "3:15:00 PM", strip seconds)
               var normalizeTime = function(t) {
-                return (t || '').trim().replace(/^0/, '').toLowerCase();
+                var str = (t || '').toString().trim().toLowerCase();
+                str = str.replace(/^0/, '');
+                str = str.replace(/\s+(am|pm)/, '$1');
+                str = str.replace(/:(\d{2}):\d{2}(am|pm)/, ':$1$2'); // strip seconds
+                return str;
               };
 
               if (normalizeTime(displayValues[r][clockInIdx]) !== normalizeTime(data.clockIn)) {

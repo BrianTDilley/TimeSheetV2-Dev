@@ -264,10 +264,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
 
     try {
       const payload: GoogleSheetPayload = {
-        action: 'deleteShift',
-        employeeName: employee.name,
-        clockIn: formatTime(session.clockIn),
-        clockOut: formatTime(session.clockOut)
+          action: 'deleteShift',
+          employeeName: employee.name,
+          deleteDate: new Date(session.clockIn).toISOString(),
+          clockIn: formatTime(session.clockIn),
+          clockOut: formatTime(session.clockOut)
       };
 
       await fetch(GOOGLE_SCRIPT_URL, {
@@ -354,6 +355,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
       const payload: GoogleSheetPayload = {
         action: 'deleteShift',
         employeeName: employee.name,
+        deleteDate: new Date(sessionToEdit.clockIn).toISOString(),
         clockIn: formatTime(sessionToEdit.clockIn),
         clockOut: formatTime(sessionToEdit.clockOut)
       };
