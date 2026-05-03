@@ -203,6 +203,138 @@ function doPost(e) {
       doc = SpreadsheetApp.getActiveSpreadsheet(); // Fallback if DriveApp is unauthorized
     }
 
+    // --- MIGRATION & REORGANIZATION ---
+    try {
+      var existingSheets = doc.getSheets();
+      existingSheets.forEach(function(s) {
+        var nm = s.getName();
+        // Use regex to match old patterns
+        var newName = null;
+        var m = nm.match(/^Master (.*) \((1st-15th|16th-End|Full Month)\)$/);
+        if (m) {
+          newName = m[2] + " Master";
+        } else {
+          var indivMatch = nm.match(/^([A-Za-z]+)\s+.*? \((1st-15th|16th-End|Full Month)\)$/);
+          if (indivMatch) {
+             newName = indivMatch[2] + " " + indivMatch[1];
+          }
+        }
+        
+        if (newName && !doc.getSheetByName(newName)) {
+          s.setName(newName);
+        }
+      });
+
+      // Re-fetch sheets after rename to process columns
+      existingSheets = doc.getSheets();
+      existingSheets.forEach(function(s) {
+          if (s.getLastColumn() > 0 && s.getLastRow() > 0) {
+            var headersRange = s.getRange(1, 1, 1, s.getLastColumn());
+            var headers = headersRange.getValues()[0];
+            
+            if (headers[0] === 'Timestamp') {
+              // It's the old format!
+              
+              // 1. Insert 'Date' at 1
+              s.insertColumnBefore(1);
+              s.getRange(1, 1).setValue('Date');
+              
+              headers = s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0];
+              var clInIdx = headers.indexOf('Clock In');
+              if (clInIdx > -1) {
+                var dRange = s.getDataRange();
+                var dVals = dRange.getValues();
+                var nd = [];
+                for (var rx = 0; rx < dVals.length; rx++) {
+                  if (rx === 0) nd.push(['Date']);
+                  else {
+                    var cInVal = dVals[rx][clInIdx];
+                    if (cInVal) {
+                      var dObj = new Date(cInVal);
+                      if (!isNaN(dObj.getTime())) {
+                        nd.push([(dObj.getMonth()+1)+"/"+dObj.getDate()+"/"+dObj.getFullYear()]);
+                      } else nd.push(['']);
+                    } else nd.push(['']);
+                  }
+                }
+                s.getRange(1, 1, nd.length, 1).setValues(nd);
+              }
+              
+              var moveColAfter = function(colName, afterColName) {
+                 var h1 = s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0];
+                 var frm = h1.indexOf(colName) + 1;
+                 var tgt = h1.indexOf(afterColName) + 1;
+                 if (frm > 0 && tgt > 0) {
+                    var dst = frm < tgt ? tgt : tgt + 1;
+                    s.moveColumns(s.getRange(1, frm), dst);
+                 }
+              };
+              
+              var moveColBefore = function(colName, beforeColName) {
+                 var h2 = s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0];
+                 var frm = h2.indexOf(colName) + 1;
+                 var tgt = h2.indexOf(beforeColName) + 1;
+                 if (frm > 0 && tgt > 0) {
+                    var dst = frm < tgt ? tgt - 1 : tgt;
+                    s.moveColumns(s.getRange(1, frm), dst);
+                 }
+              };
+
+              moveColAfter('Location In', 'Clock In');
+              moveColAfter('Location Out', 'Clock Out');
+              
+              // Move Timestamp to right before Reason
+              var h3 = s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0];
+              var tIdx = h3.indexOf('Timestamp') + 1;
+              var rIdx = h3.indexOf('Reason') + 1;
+              if (tIdx > 0) {
+                if (rIdx > 0) {
+                  moveColBefore('Timestamp', 'Reason');
+                } else {
+                  // no reason column, put it at end
+                  s.moveColumns(s.getRange(1, tIdx), s.getLastColumn());
+                }
+              }
+            }
+          }
+      });
+
+      // Re-order sheets to group them
+      var allSheets = doc.getSheets();
+      var sortedSheets = allSheets.slice().sort(function(a, b) {
+         var an = a.getName();
+         var bn = b.getName();
+         var aw = 0; var bw = 0;
+         if (an.indexOf('1st-15th') >= 0) aw += 1000;
+         else if (an.indexOf('16th-End') >= 0) aw += 2000;
+         else if (an.indexOf('Full Month') >= 0) aw += 3000;
+         if (an.indexOf('Master') >= 0) aw -= 100;
+         
+         if (bn.indexOf('1st-15th') >= 0) bw += 1000;
+         else if (bn.indexOf('16th-End') >= 0) bw += 2000;
+         else if (bn.indexOf('Full Month') >= 0) bw += 3000;
+         if (bn.indexOf('Master') >= 0) bw -= 100;
+
+         if (aw !== bw) return aw - bw;
+         return an.localeCompare(bn);
+      });
+
+      // Reorder if needed
+      var moves = 0;
+      for (var isi = 0; isi < sortedSheets.length; isi++) {
+        var expectedSheet = sortedSheets[isi];
+        var currentSheets = doc.getSheets();
+        if (currentSheets[isi].getName() !== expectedSheet.getName() && moves < 20) { // Limit to 20 moves to be safe on execution
+          doc.setActiveSheet(expectedSheet);
+          doc.moveActiveSheet(isi + 1);
+          moves++;
+        }
+      }
+    } catch (e) {
+      // Ignore migration errors so clockout still works
+    }
+    // --- END MIGRATION ---
+
     // Define procValueMap to lookup procedure values
     var procValueMap = {};
     for (var pKey in PROCEDURES) {
@@ -241,8 +373,8 @@ function doPost(e) {
       if (!sheet) {
         sheet = doc.insertSheet(sheetName);
         var baseHeaders = isMaster 
-          ? ['Timestamp', 'Employee Name', 'Category', 'Clock In', 'Clock Out', 'Total Hours', 'Hourly Pay', 'Bonus Pay', 'Total Pay', 'Location In', 'Location Out', 'Reason']
-          : ['Timestamp', 'Category', 'Clock In', 'Clock Out', 'Total Hours', 'Hourly Pay', 'Bonus Pay', 'Total Pay', 'Location In', 'Location Out', 'Reason'];
+          ? ['Date', 'Employee Name', 'Category', 'Clock In', 'Location In', 'Clock Out', 'Location Out', 'Total Hours', 'Hourly Pay', 'Bonus Pay', 'Total Pay', 'Reason', 'Timestamp']
+          : ['Date', 'Category', 'Clock In', 'Location In', 'Clock Out', 'Location Out', 'Total Hours', 'Hourly Pay', 'Bonus Pay', 'Total Pay', 'Reason', 'Timestamp'];
         sheet.appendRow(baseHeaders);
         sheet.getRange(1, 1, 1, baseHeaders.length).setFontWeight('bold');
       }
@@ -256,18 +388,21 @@ function doPost(e) {
       var bonusPayIdx = headers.indexOf('Bonus Pay');
       var totalPayIdx = headers.indexOf('Total Pay');
 
+      var dateString = (date.getMonth() + 1) + "/" + date.getDate() + "/" + date.getFullYear();
+
       var rowData = {
+        'Date': dateString,
         'Timestamp': new Date(),
         'Employee Name': data.employeeName,
         'Category': data.category,
         'Clock In': data.clockIn,
+        'Location In': data.locationIn,
         'Clock Out': data.clockOut,
+        'Location Out': data.locationOut,
         'Total Hours': '', // Will be filled with formula
         'Hourly Pay': '',  // Will be filled with formula
         'Bonus Pay': '',   // Will be filled with formula
         'Total Pay': '',   // Will be filled with formula
-        'Location In': data.locationIn,
-        'Location Out': data.locationOut,
         'Reason': data.reason || ''
       };
 
@@ -329,22 +464,30 @@ function doPost(e) {
       }
     }
 
+    // --- LOGGING ---
+    var firstName = data.employeeName ? data.employeeName.split(' ')[0] : '';
+    
+    var periodPrefix = day <= 15 ? "1st-15th" : "16th-End";
+    var sheetMasterPeriod = periodPrefix + " Master";
+    var sheetIndivPeriod = periodPrefix + " " + firstName;
+    
+    var sheetMasterFull = "Full Month Master";
+    var sheetIndivFull = "Full Month " + firstName;
+
     // Log to Master sheet specific to the Pay Period
-    logToSheet('Master ' + periodName, true);
+    logToSheet(sheetMasterPeriod, true);
     
     // Log to Individual sheet specific to the Pay Period
     if (data.employeeName) {
-      logToSheet(data.employeeName + ' ' + periodName, false);
+      logToSheet(sheetIndivPeriod, false);
     }
 
-    var monthName = month + " " + year + " (Full Month)";
-
     // Log to Master sheet for the entire month
-    logToSheet('Master ' + monthName, true);
+    logToSheet(sheetMasterFull, true);
 
     // Log to Individual sheet for the entire month
     if (data.employeeName) {
-      logToSheet(data.employeeName + ' ' + monthName, false);
+      logToSheet(sheetIndivFull, false);
     }
 
     // Remove default "Sheet1" if it was created by SpreadsheetApp.create()

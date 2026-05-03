@@ -2,7 +2,7 @@ import { GeoLocation, ProcedureCounts, Procedure } from "./types";
 
 export const formatTime = (dateStr: string): string => {
   if (!dateStr) return '';
-  return new Date(dateStr).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  return new Date(dateStr).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
 };
 
 export const formatDate = (dateStr: string): string => {
