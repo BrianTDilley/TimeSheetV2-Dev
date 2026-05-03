@@ -121,6 +121,7 @@ function doPost(e) {
         var sheet = sheets[s];
         var dataRange = sheet.getDataRange();
         var sheetValues = dataRange.getValues();
+        var displayValues = dataRange.getDisplayValues();
         
         if (sheetValues.length > 0) {
           var headers = sheetValues[0];
@@ -133,14 +134,20 @@ function doPost(e) {
             for (var r = sheetValues.length - 1; r > 0; r--) {
               var rowMatch = true;
               
-              if (empNameIdx >= 0 && sheetValues[r][empNameIdx] !== data.employeeName) {
+              if (empNameIdx >= 0 && displayValues[r][empNameIdx] !== data.employeeName) {
                 rowMatch = false;
               }
-              if (sheetValues[r][clockInIdx] !== data.clockIn) {
+              
+              // Helper to normalize time strings (e.g. "03:15:00 PM" vs "3:15:00 PM")
+              var normalizeTime = function(t) {
+                return (t || '').trim().replace(/^0/, '').toLowerCase();
+              };
+
+              if (normalizeTime(displayValues[r][clockInIdx]) !== normalizeTime(data.clockIn)) {
                 rowMatch = false;
               }
               // Optional: match clockOut to be extra safe
-              if (data.clockOut && sheetValues[r][clockOutIdx] !== data.clockOut) {
+              if (data.clockOut && normalizeTime(displayValues[r][clockOutIdx]) !== normalizeTime(data.clockOut)) {
                 rowMatch = false;
               }
               
