@@ -15,7 +15,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanEmail = email.trim();
+    const cleanEmail = email.trim().toLowerCase();
     const cleanPin = pin.trim();
     
     if (!cleanEmail || !cleanPin) {

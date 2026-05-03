@@ -50,8 +50,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
     const stored = localStorage.getItem(APP_STORAGE_KEY);
     if (stored) {
       const parsed: AppData = JSON.parse(stored);
-      if (parsed[email]) {
-        setData(parsed[email]);
+      const matchingKey = Object.keys(parsed).find(k => k.toLowerCase() === email.toLowerCase());
+      
+      if (matchingKey) {
+        setData(parsed[matchingKey]);
+        if (matchingKey !== email) {
+          parsed[email] = parsed[matchingKey];
+          delete parsed[matchingKey];
+          localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(parsed));
+        }
       }
     }
   }, [email]);

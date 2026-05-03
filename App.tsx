@@ -16,7 +16,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     // Check session storage for existing login
-    const savedEmail = sessionStorage.getItem(SESSION_KEY);
+    const savedEmail = sessionStorage.getItem(SESSION_KEY)?.toLowerCase() || null;
     const savedSecureData = sessionStorage.getItem(SECURE_SESSION_DATA_KEY);
     
     if (savedEmail && savedSecureData) {

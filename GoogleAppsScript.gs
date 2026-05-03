@@ -6,7 +6,7 @@ var EMPLOYEES = {
   'chayil@vitalitykauai.com': { name: 'Chayil Christensen', category: 'LS', rate: 38.5, pin: '1234' },
   'becca.day.reed@gmail.com': { name: 'Becca Reed', category: 'WN', rate: 50, pin: '1234' },
   'tpaulsen75@gmail.com': { name: 'Tasha Paulsen', category: 'WN', rate: 50, pin: '1234' },
-  'BeingNova@pm.me': { name: 'Nova Roberts', category: 'WN', rate: 50, pin: '1234' },
+  'beingnova@pm.me': { name: 'Nova Roberts', category: 'WN', rate: 50, pin: '1234' },
   'andrianna4@icloud.com': { name: 'Andrianna Mendiville', category: 'WN', rate: 50, pin: '1234' },
   'ikdilley@gmail.com': { name: 'Isaac Dilley', category: 'WN', rate: 50, pin: '1234' },
   'ogdilley@gmail.com': { name: 'Olivia Dilley', category: 'LS', rate: 38.5, pin: '1234' },
@@ -62,10 +62,13 @@ function doPost(e) {
 
     // --- HANDLE LOGIN ---
     if (action === 'login') {
-      var email = data.email ? data.email.trim() : '';
+      var email = data.email ? data.email.trim().toLowerCase() : '';
       var pin = data.pin ? data.pin.trim() : '';
       
-      var employee = EMPLOYEES[email];
+      var employeeKey = Object.keys(EMPLOYEES).find(function(k) {
+        return k.toLowerCase() === email;
+      });
+      var employee = employeeKey ? EMPLOYEES[employeeKey] : null;
       
       if (employee && employee.pin === pin) {
         // Return success with employee details (excluding PIN) and the procedure list
