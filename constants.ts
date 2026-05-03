@@ -1,5 +1,5 @@
 // NOTE: If you redeploy your Google Script, update this URL.
-export const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyR_FzjjAxi2ADrycdEvx3g7YNW8aEIcU9BkM0hTTbWNKIkekmabcXlAOn74sm5JOCn/exec';
+export const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwjfzFrpwnGCOdZPCtEC8ly5jRVMzMXj7J4k2wReXEEj7h_u1cYbvc0i1BcVhiS7MKt/exec';
 
 export const APP_STORAGE_KEY = 'employeeTimeClockData_v3';
 export const SESSION_KEY = 'loggedInUserEmail_v3';
@@ -7,7 +7,6 @@ export const SECURE_SESSION_DATA_KEY = 'secureSessionData_v1';
 
 export const PHONE_DAY_ELIGIBLE_EMAILS = [
   'chayil@vitalitykauai.com',
-  'btdilley@gmail.com',
   'kaycee@vitalitykauai.com'
 ];
 

@@ -29,7 +29,6 @@ var PROCEDURES = {
   'WN_GSHAddOn': { name: 'GSH Add-on', value: 10, category: 'WN' },
   'WN_Microneedling': { name: 'Microneedling', value: 50, category: 'WN' },
   'WN_Glutathione': { name: 'Glutathione', value: 20, category: 'WN' },
-  'WN_PhoneDay': { name: 'Phone Day', value: 50, category: 'WN' },
   'WN_NanoNeedling': { name: 'Nano-needling', value: 25, category: 'WN' },
   'WN_Exesomes': { name: 'Exesomes', value: 15, category: 'WN' },
   
