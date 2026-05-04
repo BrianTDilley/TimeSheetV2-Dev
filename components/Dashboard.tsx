@@ -7,6 +7,7 @@ import { ProcedureTracker } from './ProcedureTracker';
 import { HistoryList } from './HistoryList';
 import { ClockOutModal } from './ClockOutModal';
 import { ManualShiftModal } from './ManualShiftModal';
+import { ForgotClockInModal } from './ForgotClockInModal';
 import { EditClockInModal } from './EditClockInModal';
 import { EditHistorySessionModal } from './EditHistorySessionModal';
 import { MapPin, LogOut, PlayCircle, StopCircle, Lock, Phone, AlertCircle, RefreshCw } from 'lucide-react';
@@ -42,6 +43,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
   // Modals
   const [isClockOutModalOpen, setIsClockOutModalOpen] = useState(false);
   const [isManualShiftModalOpen, setIsManualShiftModalOpen] = useState(false);
+  const [isForgotClockInModalOpen, setIsForgotClockInModalOpen] = useState(false);
   const [isEditClockInModalOpen, setIsEditClockInModalOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
 
@@ -117,6 +119,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
         }
       }));
       setCurrentProcedures({});
+    } catch (e) {
+      alert("Failed to clock in. Please try again.");
+    } finally {
+      setIsLoading(false);
+      setLoadingText('');
+    }
+  };
+
+  const handleForgotClockInSubmit = async (startTime: string) => {
+    setIsLoading(true);
+    setLoadingText('Saving Clock-In Time...');
+    try {
+      let location = null;
+      try {
+          location = await getGeoLocation();
+      } catch (e) {
+          console.warn("Location unavailable for manual clock-in");
+      }
+      
+      const clockInIso = new Date(startTime).toISOString();
+      
+      setData(prev => ({
+        ...prev,
+        currentClockIn: {
+          time: clockInIso,
+          location
+        }
+      }));
+      setCurrentProcedures({});
+      setIsForgotClockInModalOpen(false);
     } catch (e) {
       alert("Failed to clock in. Please try again.");
     } finally {
@@ -528,9 +560,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
                  >
                     {isLoading ? loadingText : 'Start Shift'}
                  </Button>
-                 <button onClick={() => setIsManualShiftModalOpen(true)} className="text-sm opacity-80 hover:opacity-100 underline decoration-white/50 underline-offset-4">
-                     Forgot to Clock In? (Add Past Shift)
-                 </button>
+                 <div className="flex flex-col sm:flex-row items-center gap-4 mt-2">
+                     <button onClick={() => setIsForgotClockInModalOpen(true)} className="text-sm opacity-80 hover:opacity-100 underline decoration-white/50 underline-offset-4">
+                         Forgot to Clock In?
+                     </button>
+                     <button onClick={() => setIsManualShiftModalOpen(true)} className="text-sm opacity-80 hover:opacity-100 underline decoration-white/50 underline-offset-4">
+                         Add Past Shift
+                     </button>
+                 </div>
              </div>
          ) : (
              <div className="flex flex-col items-center gap-3">
@@ -624,6 +661,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
         isProcessing={isLoading}
         employeeCategory={employee.category}
         allProcedures={procedures}
+      />
+
+      <ForgotClockInModal
+        isOpen={isForgotClockInModalOpen}
+        onClose={() => setIsForgotClockInModalOpen(false)}
+        onSubmit={handleForgotClockInSubmit}
+        isProcessing={isLoading}
       />
 
       <EditClockInModal
