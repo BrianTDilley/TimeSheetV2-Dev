@@ -4,13 +4,13 @@ var EMPLOYEES = {
   'kaycee@vitalitykauai.com': { name: 'Kaycee Milne', category: 'OM', rate: 32, pin: '1234' },
   'hudson.malloryayn@gmail.com': { name: 'Mallory Hudson', category: 'INJ', rate: 55, pin: '1234' },
   'chayil@vitalitykauai.com': { name: 'Chayil Christensen', category: 'LS', rate: 38.5, pin: '1234' },
-  'becca.day.reed@gmail.com': { name: 'Becca Reed', category: 'WN', rate: 50, pin: '1234' },
-  'tpaulsen75@gmail.com': { name: 'Tasha Paulsen', category: 'WN', rate: 50, pin: '1234' },
-  'beingnova@pm.me': { name: 'Nova Roberts', category: 'WN', rate: 50, pin: '1234' },
-  'andrianna4@icloud.com': { name: 'Andrianna Mendiville', category: 'WN', rate: 50, pin: '1234' },
-  'ikdilley@gmail.com': { name: 'Isaac Dilley', category: 'WN', rate: 50, pin: '1234' },
+  'becca.day.reed@gmail.com': { name: 'Becca Reed', category: 'WN', rate: 55, pin: '1234' },
+  'tpaulsen75@gmail.com': { name: 'Tasha Paulsen', category: 'WN', rate: 55, pin: '1234' },
+  'beingnova@pm.me': { name: 'Nova Roberts', category: 'WN', rate: 55, pin: '1234' },
+  'andrianna4@icloud.com': { name: 'Andrianna Mendiville', category: 'WN', rate: 55, pin: '1234' },
+  'ikdilley@gmail.com': { name: 'Isaac Dilley', category: 'WN', rate: 55, pin: '1234' },
   'ogdilley@gmail.com': { name: 'Olivia Dilley', category: 'LS', rate: 38.5, pin: '1234' },
-  'btdilley@gmail.com': { name: 'Brian Dilley', category: 'WN', rate: 50, pin: '1234' },
+  'btdilley@gmail.com': { name: 'Brian Dilley', category: 'WN', rate: 55, pin: '1234' },
   'lafer006@gmail.com': { name: 'Bri LaFerriere', category: 'OM', rate: 30, pin: '1234' }
 };
 
@@ -329,6 +329,50 @@ function doPost(e) {
           doc.moveActiveSheet(isi + 1);
           moves++;
         }
+      }
+
+      // Re-calculate the Hourly Pay for WN category in May
+      if (doc.getName().indexOf('May') > -1) {
+        existingSheets.forEach(function(s) {
+           if (s.getLastColumn() > 0 && s.getLastRow() > 1) {
+             var headers = s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0];
+             var catIdx = headers.indexOf('Category');
+             var hourlyPayIdx = headers.indexOf('Hourly Pay');
+             var totalHoursIdx = headers.indexOf('Total Hours');
+             
+             if (catIdx > -1 && hourlyPayIdx > -1 && totalHoursIdx > -1) {
+               var dataRange = s.getRange(2, 1, s.getLastRow() - 1, s.getLastColumn());
+               var dVals = dataRange.getValues();
+               var formulaRange = s.getRange(2, hourlyPayIdx + 1, s.getLastRow() - 1, 1);
+               var formulas = formulaRange.getFormulas();
+               var needsUpdate = false;
+               
+               for (var rx = 0; rx < dVals.length; rx++) {
+                 if (dVals[rx][catIdx] === 'WN') {
+                   // Calculate Excel column letter correctly, wait, we have getColLetter out of scope possibly?
+                   // No getColLetter is defined below this migration block. Let's redefine it or move it up.
+                   // So instead of getColLetter we will copy the function.
+                   var temp, letter = '';
+                   var col = totalHoursIdx + 1;
+                   while (col > 0) {
+                     temp = (col - 1) % 26;
+                     letter = String.fromCharCode(temp + 65) + letter;
+                     col = (col - temp - 1) / 26;
+                   }
+                   var tHoursL = letter;
+                   var expectedFormula = '=' + tHoursL + (rx + 2) + ' * 55';
+                   if (formulas[rx][0] !== expectedFormula) {
+                     formulas[rx][0] = expectedFormula;
+                     needsUpdate = true;
+                   }
+                 }
+               }
+               if (needsUpdate) {
+                 formulaRange.setFormulas(formulas);
+               }
+             }
+           }
+        });
       }
     } catch (e) {
       // Ignore migration errors so clockout still works
