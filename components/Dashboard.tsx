@@ -56,6 +56,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
       
       if (matchingKey) {
         setData(parsed[matchingKey]);
+        if (parsed[matchingKey].currentClockIn?.procedures) {
+          setCurrentProcedures(parsed[matchingKey].currentClockIn.procedures);
+        }
         if (matchingKey !== email) {
           parsed[email] = parsed[matchingKey];
           delete parsed[matchingKey];
@@ -95,6 +98,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
 
     return () => clearInterval(interval);
   }, [isClockedIn, data.currentClockIn]);
+
+  // Sync procedures into state when they change so they persist if app times out
+  useEffect(() => {
+    if (isClockedIn) {
+      setData(prev => {
+        if (!prev.currentClockIn || prev.currentClockIn.procedures === currentProcedures) return prev;
+        return {
+          ...prev,
+          currentClockIn: {
+            ...prev.currentClockIn,
+            procedures: currentProcedures
+          }
+        };
+      });
+    }
+  }, [currentProcedures, isClockedIn]);
 
   // Persist data whenever it changes
   useEffect(() => {

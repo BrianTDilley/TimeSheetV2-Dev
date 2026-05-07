@@ -44,6 +44,7 @@ export interface EmployeeData {
     time: string;
     location: GeoLocation | null;
     reason?: string;
+    procedures?: ProcedureCounts;
   } | null;
   history: Session[];
 }
