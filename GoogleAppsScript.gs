@@ -11,7 +11,8 @@ var EMPLOYEES = {
   'ikdilley@gmail.com': { name: 'Isaac Dilley', category: 'WN', rate: 55, pin: '1234' },
   'ogdilley@gmail.com': { name: 'Olivia Dilley', category: 'LS', rate: 38.5, pin: '1234' },
   'btdilley@gmail.com': { name: 'Brian Dilley', category: 'WN', rate: 55, pin: '1234' },
-  'lafer006@gmail.com': { name: 'Bri LaFerriere', category: 'OM', rate: 30, pin: '1234' }
+  'lafer006@gmail.com': { name: 'Bri LaFerriere', category: 'OM', rate: 30, pin: '1234' },
+  'alisongranato@yahoo.com': { name: 'Alison Granato', category: 'OM', rate: 30, pin: '1234' }
 };
 
 var PROCEDURES = {
@@ -466,8 +467,24 @@ function doPost(e) {
         return rowData[header] || '';
       });
 
-      sheet.appendRow(newRow);
-      var r = sheet.getLastRow();
+      var lastRow = sheet.getLastRow();
+      var isTotalsRow = false;
+      if (lastRow > 1) {
+        var firstCell = sheet.getRange(lastRow, 1).getValue();
+        if (firstCell === 'Totals') {
+          isTotalsRow = true;
+        }
+      }
+
+      var r;
+      if (isTotalsRow) {
+        sheet.insertRowBefore(lastRow);
+        sheet.getRange(lastRow, 1, 1, newRow.length).setValues([newRow]);
+        r = lastRow;
+      } else {
+        sheet.appendRow(newRow);
+        r = sheet.getLastRow();
+      }
 
       // Write formulas for calculations
       if (clockInIdx >= 0 && clockOutIdx >= 0 && totalHoursIdx >= 0) {
@@ -505,6 +522,42 @@ function doPost(e) {
         var tPayRange = sheet.getRange(r, totalPayIdx + 1);
         tPayRange.setFormula('=' + hPayL + r + ' + ' + bPayL + r);
         tPayRange.setNumberFormat('"$"#,##0.00');
+      }
+
+      if (!isMaster) {
+        var totalsRowIdx = isTotalsRow ? r + 1 : r + 1;
+        
+        // Write 'Totals' in the first column
+        sheet.getRange(totalsRowIdx, 1).setValue('Totals');
+        sheet.getRange(totalsRowIdx, 1, 1, headers.length).setFontWeight('bold');
+        
+        // Apply formulas
+        for (var c = 0; c < headers.length; c++) {
+          var headerName = headers[c];
+          var shouldSum = false;
+          var isCurrency = false;
+          
+          if (headerName === 'Total Hours') {
+             shouldSum = true;
+          } else if (headerName === 'Hourly Pay' || headerName === 'Bonus Pay' || headerName === 'Total Pay') {
+             shouldSum = true;
+             isCurrency = true;
+          } else if (procValueMap[headerName] !== undefined) {
+             shouldSum = true;
+          }
+
+          if (shouldSum) {
+            var colLetter = getColLetter(c);
+            var sumFormula = '=SUM(' + colLetter + '2:' + colLetter + (totalsRowIdx - 1) + ')';
+            var cell = sheet.getRange(totalsRowIdx, c + 1);
+            cell.setFormula(sumFormula);
+            if (isCurrency) {
+              cell.setNumberFormat('"$"#,##0.00');
+            } else if (headerName === 'Total Hours') {
+              cell.setNumberFormat('0.00');
+            }
+          }
+        }
       }
     }
 

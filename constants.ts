@@ -1,5 +1,5 @@
 // NOTE: If you redeploy your Google Script, update this URL.
-export const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx8DaAS3fEVQac3Z6IW-57ochauA8FbCgfEF9EMLzigozE0pkUu3pzf2slnm1x-sePe/exec';
+export const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyvk-ueNd_Bcbp2UKSF8y94tOVWUxsZ3ZyOkdMsDZqxt5S9tk8lAKbltm9vM4lbmUI/exec';
 
 export const APP_STORAGE_KEY = 'employeeTimeClockData_v3';
 export const SESSION_KEY = 'loggedInUserEmail_v4';
