@@ -10,11 +10,12 @@ interface EditHistorySessionModalProps {
   onSubmit: (id: string, startTime: string, endTime: string, procedures: ProcedureCounts, reason: string) => void;
   isProcessing: boolean;
   employeeCategory: string;
+  employeeEmail: string;
   allProcedures: Record<string, Procedure>;
 }
 
 export const EditHistorySessionModal: React.FC<EditHistorySessionModalProps> = ({ 
-    session, isOpen, onClose, onSubmit, isProcessing, employeeCategory, allProcedures 
+    session, isOpen, onClose, onSubmit, isProcessing, employeeCategory, employeeEmail, allProcedures 
 }) => {
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -69,6 +70,7 @@ export const EditHistorySessionModal: React.FC<EditHistorySessionModalProps> = (
                     counts={procedures}
                     onChange={setProcedures}
                     employeeCategory={employeeCategory}
+                    employeeEmail={employeeEmail}
                     procedures={allProcedures}
                  />
               </div>

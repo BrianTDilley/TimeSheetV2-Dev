@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GOOGLE_SCRIPT_URL, APP_STORAGE_KEY, PHONE_DAY_ELIGIBLE_EMAILS } from '../constants';
+import { GOOGLE_SCRIPT_URL, APP_STORAGE_KEY, PHONE_DAY_ELIGIBLE_EMAILS, INSTAGRAM_ELIGIBLE_EMAILS } from '../constants';
 import { AppData, EmployeeData, ProcedureCounts, Session, GoogleSheetPayload, Employee, Procedure } from '../types';
 import { getGeoLocation, calculateEarnings, formatTime } from '../utils';
 import { Button } from './ui/Button';
@@ -501,6 +501,48 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
     }
   };
 
+  const handleRecordInstagram = async () => {
+    if (!confirm("Are you sure you want to record an Instagram entry? This will log a $25 bonus pay entry.")) return;
+    
+    setIsLoading(true);
+    setLoadingText('Recording Instagram...');
+    
+    const payload: GoogleSheetPayload = {
+        action: 'instagram',
+        employeeName: employee.name,
+        category: employee.category,
+        clockIn: 'N/A',
+        clockOut: 'N/A',
+        totalHours: '0.00',
+        locationIn: 'N/A',
+        locationOut: 'N/A',
+        hourlyPay: '0.00',
+        bonusPay: '25.00',
+        totalPay: '25.00',
+        [`Instagram [${employee.category}]`]: 1
+    };
+
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error('Network response was not ok');
+        const result = await response.json();
+        if (result.result !== 'success') throw new Error(result.error || 'Unknown error');
+
+        alert("Instagram entry recorded successfully!");
+    } catch (e) {
+        console.error("Instagram record failed", e);
+        alert("Failed to record Instagram entry. Please try again.");
+    } finally {
+        setIsLoading(false);
+        setLoadingText('');
+    }
+  };
+
   const handleRetrySync = async (session: Session) => {
       // Set to pending while retrying
       setData(prev => ({
@@ -628,6 +670,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
         </div>
       )}
 
+      {INSTAGRAM_ELIGIBLE_EMAILS.includes(email.toLowerCase()) && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+                <div className="bg-pink-100 p-2 rounded-lg text-pink-600">
+                    <AlertCircle size={20} />
+                </div>
+                <div>
+                    <h3 className="text-sm font-bold text-gray-800">Instagram</h3>
+                    <p className="text-xs text-gray-500">Record an Instagram entry ($25)</p>
+                </div>
+            </div>
+            <Button 
+                onClick={handleRecordInstagram} 
+                isLoading={isLoading && loadingText.includes('Instagram')} 
+                variant="outline"
+                size="sm"
+                className="w-auto px-4"
+            >
+                Record Entry
+            </Button>
+        </div>
+      )}
+
       {/* Main Content Area */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
@@ -638,6 +703,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
                     counts={currentProcedures} 
                     onChange={setCurrentProcedures} 
                     employeeCategory={employee.category}
+                    employeeEmail={email}
                     procedures={procedures}
                  />
             </div>
@@ -679,6 +745,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
         onSubmit={handleManualShiftSubmit}
         isProcessing={isLoading}
         employeeCategory={employee.category}
+        employeeEmail={email}
         allProcedures={procedures}
       />
 
@@ -704,6 +771,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ email, employee, procedure
         onSubmit={handleEditHistorySessionSubmit}
         isProcessing={isLoading}
         employeeCategory={employee.category}
+        employeeEmail={email}
         allProcedures={procedures}
       />
     </div>

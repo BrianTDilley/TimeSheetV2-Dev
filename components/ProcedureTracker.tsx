@@ -6,10 +6,11 @@ interface ProcedureTrackerProps {
   counts: ProcedureCounts;
   onChange: (newCounts: ProcedureCounts) => void;
   employeeCategory: string;
+  employeeEmail?: string;
   procedures: Record<string, Procedure>;
 }
 
-export const ProcedureTracker: React.FC<ProcedureTrackerProps> = ({ counts, onChange, employeeCategory, procedures }) => {
+export const ProcedureTracker: React.FC<ProcedureTrackerProps> = ({ counts, onChange, employeeCategory, employeeEmail, procedures }) => {
   
   const handleIncrement = (key: string) => {
     onChange({
@@ -28,7 +29,7 @@ export const ProcedureTracker: React.FC<ProcedureTrackerProps> = ({ counts, onCh
 
   // Filter procedures that match the employee's category
   const visibleProcedures = (Object.entries(procedures) as [string, Procedure][]).filter(
-    ([_, proc]) => proc.category === employeeCategory
+    ([_, proc]) => proc.category === employeeCategory && (!proc.employeeOnly || proc.employeeOnly === employeeEmail)
   );
 
   if (visibleProcedures.length === 0) {

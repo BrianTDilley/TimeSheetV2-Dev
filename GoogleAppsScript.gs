@@ -24,6 +24,7 @@ var PROCEDURES = {
   'INJ_Microneedling': { name: 'Microneedling', value: 50, category: 'INJ' },
   'INJ_NanoNeedling': { name: 'Nano-needling', value: 25, category: 'INJ' },
   'INJ_Exesomes': { name: 'Exesomes', value: 15, category: 'INJ' },
+  'INJ_Instagram': { name: 'Instagram', value: 25, category: 'INJ', employeeOnly: 'hudson.malloryayn@gmail.com' },
   
   // WN
   'WN_IV': { name: 'IV', value: 35, category: 'WN' },
@@ -491,7 +492,7 @@ function doPost(e) {
         var cInL = getColLetter(clockInIdx);
         var cOutL = getColLetter(clockOutIdx);
         var tHoursRange = sheet.getRange(r, totalHoursIdx + 1);
-        tHoursRange.setFormula('=IF(OR(ISBLANK(' + cInL + r + '), ISBLANK(' + cOutL + r + ')), 0, MOD(' + cOutL + r + '-' + cInL + r + ', 1)*24)');
+        tHoursRange.setFormula('=IF(OR(ISBLANK(' + cInL + r + '), ISBLANK(' + cOutL + r + '), ' + cInL + r + '="N/A"), 0, MOD(' + cOutL + r + '-' + cInL + r + ', 1)*24)');
         tHoursRange.setNumberFormat('0.00');
       }
 

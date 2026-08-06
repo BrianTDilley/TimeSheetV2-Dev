@@ -9,11 +9,12 @@ interface ManualShiftModalProps {
   onSubmit: (startTime: string, endTime: string, procedures: ProcedureCounts, reason: string) => void;
   isProcessing: boolean;
   employeeCategory: string;
+  employeeEmail: string;
   allProcedures: Record<string, Procedure>;
 }
 
 export const ManualShiftModal: React.FC<ManualShiftModalProps> = ({ 
-    isOpen, onClose, onSubmit, isProcessing, employeeCategory, allProcedures 
+    isOpen, onClose, onSubmit, isProcessing, employeeCategory, employeeEmail, allProcedures 
 }) => {
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -60,6 +61,7 @@ export const ManualShiftModal: React.FC<ManualShiftModalProps> = ({
                     counts={procedures}
                     onChange={setProcedures}
                     employeeCategory={employeeCategory}
+                    employeeEmail={employeeEmail}
                     procedures={allProcedures}
                  />
               </div>

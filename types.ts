@@ -9,6 +9,7 @@ export interface Procedure {
   name: string;
   value: number;
   category: string;
+  employeeOnly?: string;
 }
 
 export interface GeoLocation {
@@ -61,7 +62,7 @@ export interface LoginResponse {
 }
 
 export interface GoogleSheetPayload {
-  action?: 'login' | 'clockOut' | 'phoneDay' | 'deleteShift';
+  action?: 'login' | 'clockOut' | 'phoneDay' | 'deleteShift' | 'instagram';
   email?: string;
   pin?: string;
   employeeName?: string;
